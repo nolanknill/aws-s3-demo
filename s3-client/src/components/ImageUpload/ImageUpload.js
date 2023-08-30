@@ -1,17 +1,65 @@
 import { useState } from 'react';
 import './ImageUpload.scss';
+import axios from "axios";
 
-const ImageUpload = () => {
+const SERVER_URL = process.env.REACT_APP_SERVER_URL;
+
+const ImageUpload = ( { onUpload } ) => {
   // When we are uploading an image, we want to disable the upload button
   const [isUploading, setIsUploading] = useState(false);
 
   // Upload form submit handler
-  const handleUpload = (e) => {
+  const handleUpload = async (e) => {
     // Stops page from refreshing
     e.preventDefault();
 
+    // Grab two form inputs (name of file, and file type)
+    const form = e.target;
+    const imgTitle = form.imgTitle.value;
+    const imgFile = form.imgFile.files[0];
+
     // Disable the upload button
     setIsUploading(true);
+
+    let signedUrlResponse;
+    try {
+      signedUrlResponse = await axios.post(`${SERVER_URL}/s3/signed-url`, {
+        fileName: imgFile.name,
+        fileType: imgFile.type
+      })
+    } catch (error) {
+      setIsUploading(false);
+      
+      return;
+    }
+  
+    const uniqueFileName = signedUrlResponse.data.fileName;
+
+    try {
+      await axios.put(signedUrlResponse.data.url, imgFile, {
+        headers: {
+          'Content-Type': imgFile.type
+        }
+      })
+    } catch (error) {
+      console.log(error);
+    }
+
+    try {
+      const createGalleryItemResponse = await axios.post(`${SERVER_URL}/gallery/item`, {
+        title: imgTitle,
+        fileName: uniqueFileName
+      });
+    
+    } catch (error) {
+      console.log(error);
+    }
+    
+    form.reset();
+    
+    setIsUploading(false);
+    
+    onUpload();
   }
 
   return (
