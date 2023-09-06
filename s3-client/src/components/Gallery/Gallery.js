@@ -14,7 +14,7 @@ const Gallery = ({ items }) => {
                 <GalleryItem
                   key={item.id}
                   title={item.title}
-                  src={item.src}
+                  src={item.url}
                 /> 
               )  
             })}
